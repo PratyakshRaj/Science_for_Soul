@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 from sqlalchemy import text
 import pyTigerGraph as tg
 from dotenv import load_dotenv
+from storage_service import generate_secure_expiry_url
 
 # 🔌 Load local configuration parameters from .env
 load_dotenv()
@@ -110,8 +111,17 @@ async def load_student_dashboard(user_id: int, db: AsyncSession = Depends(get_db
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Graph runtime error: {str(e)}")
 
+    # 🎬 NEW STEP 4: Get relative path from TigerGraph result and sign it for the UI
+    # (If the graph mock doesn't send a path, we fall back to a default video path)
+    relative_video_path = next_steps.get("recommended_next_lesson", "courses/default.mp4") + ".mp4"
+    
+    # This calls your aioboto3 function (which main.py will mock!)
+    cdn_stream_url = await generate_secure_expiry_url(relative_video_path)
+
+    
     return {
         "status": "success",
         "student_graph_id": graph_node_id,
+        "stream_url": cdn_stream_url,  # The UI video player uses this direct link!
         "payload": next_steps
     }
