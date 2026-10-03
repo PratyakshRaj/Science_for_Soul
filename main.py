@@ -49,6 +49,34 @@ if not hasattr(tg.TigerGraphConnection, 'session'):
     mock_session.mount = MagicMock(return_value=None)
     tg.TigerGraphConnection.session = mock_session
 
+
+from unittest.mock import AsyncMock, MagicMock
+import sys
+
+# -------------------------------------------------------------------------
+# 🤖 CLOUDFLARE R2 ASYNC MOCK INJECTION (Add to main.py)
+# -------------------------------------------------------------------------
+class MockAioboto3Client:
+    async def __aenter__(self):
+        return self
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        pass
+    async def generate_presigned_url(self, client_method, Params, ExpiresIn):
+        print(f"☁️ [Mock R2 Engine] Generating secure 60-min URL for Key: '{Params['Key']}'")
+        # Return a deterministic mock signed path string for testing assertions
+        return f"https://cloudflare.net{Params['Bucket']}/{Params['Key']}?token=mock_secure_expiry_jwt"
+
+class MockAioboto3Session:
+    def client(self, service_name, **kwargs):
+        return MockAioboto3Client()
+
+# Intercept aioboto3 dependency before execution
+mock_aioboto3 = MagicMock()
+mock_aioboto3.Session = MockAioboto3Session
+sys.modules['aioboto3'] = mock_aioboto3
+
+
+
 # -------------------------------------------------------------------------
 # 🔌 2. LIVE DATABASE CONFIGURATION INTERCEPT 
 # -------------------------------------------------------------------------
