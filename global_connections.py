@@ -7,6 +7,10 @@ from sqlalchemy import text
 import pyTigerGraph as tg
 from dotenv import load_dotenv
 from storage_service import generate_secure_expiry_url
+from pydantic import BaseModel
+from progress_service import process_video_completion, process_quiz_submission
+
+
 
 # 🔌 Load local configuration parameters from .env
 load_dotenv()
@@ -55,6 +59,17 @@ async def lifespan(app: FastAPI):
     await engine.dispose()
 
 app = FastAPI(lifespan=lifespan)
+
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, replace with your frontend URL (e.g., ["https://myfrontend.com"])
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows GET, POST, OPTIONS, etc.
+    allow_headers=["*"],
+)
+
 
 async def get_db() -> AsyncSession:
     async with AsyncSessionLocal() as session:
@@ -125,3 +140,26 @@ async def load_student_dashboard(user_id: int, db: AsyncSession = Depends(get_db
         "stream_url": cdn_stream_url,  # The UI video player uses this direct link!
         "payload": next_steps
     }
+# ----------------------------------------------------
+# Pydantic Schemas for incoming UI Payloads
+class VideoCompletePayload(BaseModel):
+    lesson_id: str
+
+class QuizAnswer(BaseModel):
+    question_id: int
+    chosen_option_id: int
+    is_correct: bool # UI or grading middleware flags this
+
+class QuizSubmissionPayload(BaseModel):
+    quiz_id: str
+    answers: list[QuizAnswer]
+
+@app.post("/api/lessons/complete/{user_id}")
+async def complete_video(user_id: int, payload: VideoCompletePayload, db: AsyncSession = Depends(get_db)):
+    return await process_video_completion(user_id, payload.lesson_id, db)
+
+@app.post("/api/quizzes/submit/{user_id}")
+async def submit_quiz(user_id: int, payload: QuizSubmissionPayload, db: AsyncSession = Depends(get_db)):
+    # Extract structural dictionary models out of Pydantic for the engine layer
+    raw_answers = [answer.model_dump() for answer in payload.answers]
+    return await process_quiz_submission(user_id, payload.quiz_id, raw_answers, db)

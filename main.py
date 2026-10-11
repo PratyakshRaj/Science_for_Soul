@@ -39,10 +39,16 @@ def mock_run_installed_query(self, query_name, params):
         "target_student_id": params.get("student_id")
     }
 
+def mock_upsert_edge(self, sourceVertexType, sourceVertexId, edgeType, targetVertexType, targetVertexId, attributes=None):
+    print(f"🌲 [Mock Graph Engine] Connected: {sourceVertexId} --({edgeType})--> {targetVertexId} with {attributes}")
+    return 1
+
+
 # Overwrite real TigerGraph behaviors permanently
 tg.TigerGraphConnection.getVerticesById = mock_get_vertices_by_id
 tg.TigerGraphConnection.upsertVertex = mock_upsert_vertex
 tg.TigerGraphConnection.runInstalledQuery = mock_run_installed_query
+tg.TigerGraphConnection.upsertEdge = mock_upsert_edge
 
 if not hasattr(tg.TigerGraphConnection, 'session'):
     mock_session = MagicMock()
@@ -129,5 +135,20 @@ with TestClient(app) as client:
     response_c = client.get("/api/dashboard/3")
     print(f"FastAPI Status Code: {response_c.status_code}")
     print(f"Data Payload Received: {response_c.json()}\n")
+
+    print("--- Running Test Scenario 4: Mark Lesson Video Complete ---")
+    response_d = client.post("/api/lessons/complete/4", json={"lesson_id": "VEC_02_Cross_Product"})
+    print(f"Status: {response_d.status_code} | Payload: {response_d.json()}\n")
+
+    print("--- Running Test Scenario 5: Submit Quiz Failure Results ---")
+    failed_quiz_payload = {
+        "quiz_id": "QUIZ_VEC_02",
+        "answers": [
+            {"question_id": 101, "chosen_option_id": 3, "is_correct": False},
+            {"question_id": 102, "chosen_option_id": 1, "is_correct": True}
+        ]
+    }
+    response_e = client.post("/api/quizzes/submit/4", json=failed_quiz_payload)
+    print(f"Status: {response_e.status_code} | Payload: {response_e.json()}\n")
 
 print("✅ Diagnostics Complete. All database and routing checks passed!")
