@@ -29,10 +29,24 @@ def mock_upsert_vertex(self, vertexType, vertexId, attributes):
 
 def mock_run_installed_query(self, query_name, params):
     print(f"🌲 [Mock Graph Engine] Executing Algorithmic Pathfinding Query: {query_name}")
+    
+    # ✅ Update this dictionary return to include the dynamic chapters array the UI expects
     return {
         "recommended_next_lesson": "VEC_02_Cross_Product",
-        "target_student_id": params.get("student_id")
+        "target_student_id": params.get("student_id"),
+        "chapters": [
+            {
+                "id": "ch_vectors_01",
+                "chapterName": "Chapter 1: Advanced Vector Mathematics",
+                "completionPercentage": 50,
+                "topics": [
+                    { "id": "top_vec_1", "title": "1.1 Vector Dot Product Fundamentals", "isCompleted": True },
+                    { "id": "top_vec_2", "title": "1.2 VEC_02_Cross_Product", "isCompleted": False }
+                ]
+            }
+        ]
     }
+
 
 def mock_upsert_edge(self, sourceVertexType, sourceVertexId, edgeType, targetVertexType, targetVertexId, attributes=None):
     print(f"🌲 [Mock Graph Engine] Telemetry Edge Created: {sourceVertexId} --({edgeType})--> {targetVertexId}")

@@ -64,7 +64,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with your frontend URL (e.g., ["https://myfrontend.com"])
+    allow_origins=["http://localhost:5173"],  # In production, replace with your frontend URL (e.g., ["https://myfrontend.com"])
     allow_credentials=True,
     allow_methods=["*"],  # Allows GET, POST, OPTIONS, etc.
     allow_headers=["*"],
@@ -98,10 +98,10 @@ def _sync_ensure_graph_node(student_id: int, email: str) -> str:
 # 🚀 FULLY ASYNC PROTECTED ENDPOINT
 # ----------------------------------------------------
 @app.get("/api/dashboard/{user_id}")
-async def load_student_dashboard(user_id: int, db: AsyncSession = Depends(get_db)):
+async def load_student_dashboard(user_id: int, user_password, db: AsyncSession = Depends(get_db)):
     # 1. Verification Logic Pipeline (Postgres)
-    query = text("SELECT id, email, is_active, has_active_subscription FROM users WHERE id = :id")
-    result = await db.execute(query, {"id": user_id})
+    query = text("SELECT id, password, email, is_active, has_active_subscription FROM users WHERE id = :id AND password = :password")
+    result = await db.execute(query, {"id": user_id,"password": user_password})
     user = result.mappings().first()
 
     if not user or not user["is_active"]:
